@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as et
+import re
 import zipfile
 import xml_navigator as xmlnav
 
@@ -37,25 +38,44 @@ def extract_style(element):
 def extract_bookmark(element):
     bookmark_name = element.attrib[BOOKMARKNAME_KEY]
     if bookmark_name != '_GoBack':
-        return {'type': 'anchor', 'name': bookmark_name}
+        bookmark_encoding = {'type': 'anchor', 'name': bookmark_name}
     else:
-        return None
+        bookmark_encoding = None
+    return bookmark_encoding
+
 
 def extract_hyperlink(element):
     return {'type': 'phrase', 'english': find_text(element), 'destination': find_link(element)}
 
+
+def extract_inline_from_text(text):
+    externalref_regex = r'(\[[\w\s]+],[\s]*[\w\-]+)'
+    components = re.split(externalref_regex, text)
+    extracts = []
+    for text_component in components:
+        if text_component.startswith('['):
+            extracts.append({'type': 'externalref', 'translit': text_component})
+        else:
+            extracts.append({'type': 'text', 'english': text_component})
+    return extracts
+
+
 def extract_text(element):
     text = find_text(element)
     if text is not None:
-        return {'type': 'text', 'english': text}
+        text_encoding = {'type': 'text', 'english': text}
     else:
-        return None
+        text_encoding = None
+    return text_encoding
+
 
 def find_link(element):
     if LINK_KEY in element.attrib:
-        return element.attrib[LINK_KEY]
+        link_encoding = element.attrib[LINK_KEY]
     else:
-        return None
+        link_encoding = None
+    return link_encoding
+
 
 def find_text(element):
     collected_text = ""
@@ -64,6 +84,7 @@ def find_text(element):
     if collected_text == "":
         collected_text = None
     return collected_text
+
 
 def content_per_type(element):
     extractor_map = {
@@ -91,6 +112,8 @@ def encode_doc(docx_path):
     paragraphs = []
     xml_root = get_xml_root(docx_path)
     for para_element in xmlnav.every(xml_root, PARA_NAMESPACE):
-        para_encoding = {'id': '*', 'content': extract_content(para_element), 'style': extract_style(para_element)}
+        para_encoding = {'id': '*',
+                         'content': extract_content(para_element),
+                         'style': extract_style(para_element)}
         paragraphs.append(para_encoding)
     return {'paragraphs': paragraphs}
