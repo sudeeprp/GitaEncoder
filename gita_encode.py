@@ -1,5 +1,4 @@
 import xml.etree.ElementTree as et
-import re
 import zipfile
 import xml_navigator as xmlnav
 
@@ -38,32 +37,20 @@ def extract_style(element):
 def extract_bookmark(element):
     bookmark_name = element.attrib[BOOKMARKNAME_KEY]
     if bookmark_name != '_GoBack':
-        bookmark_encoding = {'type': 'anchor', 'name': bookmark_name}
+        bookmark_encoding = {'type': 'anchor', 'name': bookmark_name, 'content': ''}
     else:
         bookmark_encoding = None
     return bookmark_encoding
 
 
 def extract_hyperlink(element):
-    return {'type': 'phrase', 'english': find_text(element), 'destination': find_link(element)}
-
-
-def extract_inline_from_text(text):
-    externalref_regex = r'(\[[\w\s]+],[\s]*[\w\-]+)'
-    components = re.split(externalref_regex, text)
-    extracts = []
-    for text_component in components:
-        if text_component.startswith('['):
-            extracts.append({'type': 'externalref', 'translit': text_component})
-        else:
-            extracts.append({'type': 'text', 'english': text_component})
-    return extracts
+    return {'type': 'phrase', 'destination': find_link(element), 'content': find_text(element)}
 
 
 def extract_text(element):
     text = find_text(element)
     if text is not None:
-        text_encoding = {'type': 'text', 'english': text}
+        text_encoding = {'type': 'text', 'content': text}
     else:
         text_encoding = None
     return text_encoding
@@ -112,8 +99,9 @@ def encode_doc(docx_path):
     paragraphs = []
     xml_root = get_xml_root(docx_path)
     for para_element in xmlnav.every(xml_root, PARA_NAMESPACE):
+        style = extract_style(para_element)
         para_encoding = {'id': '*',
                          'content': extract_content(para_element),
-                         'style': extract_style(para_element)}
+                         'style': style}
         paragraphs.append(para_encoding)
     return {'paragraphs': paragraphs}

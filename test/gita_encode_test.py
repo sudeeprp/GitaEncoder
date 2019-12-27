@@ -4,6 +4,13 @@ import json
 import string
 import unittest
 import gita_encode
+import matcher
+import in_para_text
+import in_para_id
+import in_para_bookmark
+import in_para_phrase
+import in_para_externalref
+import in_para_allcontent
 
 
 def strip_whitespaces(string_with_whitespace):
@@ -22,40 +29,80 @@ def encoding_of_doc_matches(test_docx_filename, expected_json_patterns):
     return matched
 
 
+def match_results(content_regex, object_list):
+    matched_results = []
+    for list_member in object_list:
+        matched_results.append(matcher.match(content_regex, list_member))
+    return matched_results
+
+
+def paras_from(docx_filename):
+    docx_as_dict = gita_encode.encode_doc(os.path.join('../test_data', docx_filename))
+    return in_para_allcontent.paralist(docx_as_dict)
+
+
 class EncodeTest(unittest.TestCase):
+    def assertAllAreOk(self, results):
+        self.assertTrue(False not in results)
+
+    def assertAtleastOneOk(self, results):
+        self.assertTrue(True in results)
+
     def test_no_array_in_array(self):
         array_in_array_pattern = [r'\[\[']
         self.assertFalse(encoding_of_doc_matches('heading1.docx', array_in_array_pattern))
 
     def test_doc_is_encoded_as_para(self):
-        expected_para_json_patterns = \
-            [r'"paragraphs": \[', r'{ "id":"[^"]*"', r'"content": \[', r'"type": "text"',
-             r'"english": "[^"]*"']
-        self.assertTrue(encoding_of_doc_matches('heading1.docx', expected_para_json_patterns))
+        paragraphs = paras_from('heading1.docx')
+        para_ids_ok = match_results(in_para_id.content_regex, paragraphs)
+        para_texts_ok = match_results(in_para_allcontent.content_regex, paragraphs)
+        self.assertAllAreOk(para_ids_ok)
+        self.assertAtleastOneOk(para_texts_ok)
 
     def test_H1_is_encoded_as_a_para(self):
-        expected_h1_json_patterns = [r'"english": "Chapter 1"', r'"style":"heading1"']
-        self.assertTrue(encoding_of_doc_matches('heading1.docx', expected_h1_json_patterns))
+        paragraphs = paras_from('heading1.docx')
+        contents = paragraphs[0]['content']
+        contents_comply = match_results(in_para_text.content_regex, contents)
+        self.assertAtleastOneOk(contents_comply)
+
+        style = paragraphs[0]['style']
+        self.assertEqual(style, 'heading1')
+
+        expected_content = {"type": "text", "content": "Chapter 1"}
+        expected_finds = match_results(expected_content, contents)
+        self.assertAtleastOneOk(expected_finds)
 
     def test_default_style_is_normal(self):
-        expected_normal_pattern = [r'"style": "normal"']
-        self.assertTrue(encoding_of_doc_matches('anchor.docx', expected_normal_pattern))
+        paragraphs = paras_from('anchor.docx')
+        style = paragraphs[0]['style']
+        self.assertEqual(style, 'normal')
 
     def test_bookmark_is_encoded_as_anchor(self):
-        expected_anchor_patterns = [r'"type": "anchor"', r'"name": "one_bookmark"',
-                                    r'"type": "text"', r'"english": "Here is a bookmark"']
-        self.assertTrue(encoding_of_doc_matches('anchor.docx', expected_anchor_patterns))
+        anchors_match = []
+        for para in paras_from('anchor.docx'):
+            anchor_contents = in_para_allcontent.pick_contents\
+                (in_para_allcontent.contentlist(para), lambda x: x['type'] == "anchor")
+            for content in anchor_contents:
+                anchors_match.append(matcher.match(in_para_bookmark.content_regex, content))
+        self.assertAllAreOk(anchors_match)
 
     def test_link_is_encoded_as_phrase(self):
-        expected_phrase_patterns = [r'"type": "phrase"', r'"english": "work without attachment"',
-                                    r'"destination": "karmayOga_a_defn"']
-        self.assertTrue(encoding_of_doc_matches('bookmark with link.docx',
-                                                expected_phrase_patterns))
+        links_match = []
+        for para in paras_from('bookmark with link.docx'):
+            phrase_contents = in_para_allcontent.pick_contents\
+                (in_para_allcontent.contentlist(para), lambda x: x["type"] == "phrase")
+            for content in phrase_contents:
+                links_match.append(matcher.match(in_para_phrase.content_regex, content))
+        self.assertAllAreOk(links_match)
 
     def test_reference_is_encoded_as_external(self):
-        expected_externalref_patterns = [r'"type": "externalref"', r'"translit": "pAncharAtra"',
-                                         r'"section": "2-23"']
-        self.assertTrue(encoding_of_doc_matches('externalref.docx', expected_externalref_patterns))
+        extrefs_match = []
+        for para in paras_from('externalref.docx'):
+            extref_contents = in_para_allcontent.pick_contents\
+                (in_para_allcontent.contentlist(para), lambda x: x["type"] == "externalRef")
+            for content in extref_contents:
+                extrefs_match.append(matcher.match(in_para_externalref.content_regex, content))
+        self.assertAllAreOk(extrefs_match)
 
 
 if __name__ == '__main__':
