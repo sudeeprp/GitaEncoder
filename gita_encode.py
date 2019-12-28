@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as et
 import zipfile
 import xml_navigator as xmlnav
+import consolidate
 
 
 WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
@@ -85,14 +86,16 @@ def content_per_type(element):
     return content
 
 
-def extract_content(para_element):
-    content = []
+def extract_content(para_element, style):
+    contentlist = []
     def add_if_not_none(x):
         if x is not None:
-            content.append(x)
+            contentlist.append(x)
     for child_of_para in xmlnav.children(para_element):
         add_if_not_none(content_per_type(child_of_para))
-    return content
+    contentlist = consolidate.consolidate_contentlist(contentlist)
+    contentlist = consolidate.extract_inline_from_texts(contentlist, style)
+    return contentlist
 
 
 def encode_doc(docx_path):
@@ -101,7 +104,7 @@ def encode_doc(docx_path):
     for para_element in xmlnav.every(xml_root, PARA_NAMESPACE):
         style = extract_style(para_element)
         para_encoding = {'id': '*',
-                         'content': extract_content(para_element),
+                         'content': extract_content(para_element, style),
                          'style': style}
         paragraphs.append(para_encoding)
     return {'paragraphs': paragraphs}

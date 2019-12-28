@@ -43,7 +43,7 @@ def paras_from(docx_filename):
 
 class EncodeTest(unittest.TestCase):
     def assertAllAreOk(self, results):
-        self.assertTrue(False not in results)
+        self.assertTrue(results and False not in results)
 
     def assertAtleastOneOk(self, results):
         self.assertTrue(True in results)
@@ -99,7 +99,7 @@ class EncodeTest(unittest.TestCase):
         extrefs_match = []
         for para in paras_from('externalref.docx'):
             extref_contents = in_para_allcontent.pick_contents\
-                (in_para_allcontent.contentlist(para), lambda x: x["type"] == "externalRef")
+                (in_para_allcontent.contentlist(para), lambda x: x["type"] == "extref")
             for content in extref_contents:
                 extrefs_match.append(matcher.match(in_para_externalref.content_regex, content))
         self.assertAllAreOk(extrefs_match)

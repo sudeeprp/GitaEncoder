@@ -1,4 +1,4 @@
-import re
+import in_para_externalref
 
 
 def get_type_and_text(para):
@@ -16,12 +16,12 @@ def consolidate_adjacent(contentlist, search_index):
     if para_type != 'text':
         return contentlist[search_index], search_index + 1
     starting_type = para_type
-    consolidated_text = content.strip()
+    consolidated_text = content
     search_index += 1
     while search_index < len(contentlist):
         para_type, content = get_type_and_text(contentlist[search_index])
         if para_type == starting_type:
-            consolidated_text += ' ' + content.strip()
+            consolidated_text += content
             search_index += 1
         else:
             break
@@ -37,13 +37,14 @@ def consolidate_contentlist(contentlist):
     return consolidated_contentlist
 
 
-def extract_inline_from_text(text):
-    externalref_regex = r'(\[[\w\s]+],[\s]*[\w\-]+)'
-    components = re.split(externalref_regex, text)
-    extracts = []
-    for text_component in components:
-        if text_component.startswith('['):
-            extracts.append({'type': 'externalref', 'translit': text_component})
+def extract_inline_from_texts(contentlist, style):
+    if style != 'normal':
+        return contentlist
+
+    extracted_contentlist = []
+    for content in contentlist:
+        if content["type"] == "text":
+            extracted_contentlist += in_para_externalref.expand_extref_in_text_content(content)
         else:
-            extracts.append({'type': 'text', 'content': text_component})
-    return extracts
+            extracted_contentlist.append(content)
+    return extracted_contentlist
