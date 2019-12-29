@@ -95,6 +95,15 @@ class EncodeTest(unittest.TestCase):
                 links_match.append(matcher.match(in_para_phrase.content_regex, content))
         self.assertAllAreOk(links_match)
 
+    def test_link_to_html_is_encoded_as_phrase(self):
+        links_match = []
+        para_with_link = paras_from('link to html.docx')[0]
+        phrase_contents = in_para_allcontent.pick_contents\
+                (in_para_allcontent.contentlist(para_with_link), lambda x: x["type"] == "phrase")
+        for content in phrase_contents:
+            links_match.append(matcher.match(in_para_phrase.content_regex, content))
+        self.assertAllAreOk(links_match)
+
     def test_reference_is_encoded_as_external(self):
         extrefs_match = []
         for para in paras_from('externalref.docx'):

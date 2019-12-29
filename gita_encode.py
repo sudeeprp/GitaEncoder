@@ -5,6 +5,7 @@ import consolidate
 
 
 WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
+RELATION_NAMESPACE = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
 PARA_NAMESPACE = WORD_NAMESPACE + 'p'
 STYLE_NAMESPACE = WORD_NAMESPACE + 'pStyle'
 TEXT_NAMESPACE = WORD_NAMESPACE + 't'
@@ -13,6 +14,7 @@ HYPERLINK_NAMESPACE = WORD_NAMESPACE + 'hyperlink'
 VALUE_KEY = WORD_NAMESPACE + 'val'
 BOOKMARKNAME_KEY = WORD_NAMESPACE + 'name'
 LINK_KEY = WORD_NAMESPACE + 'anchor'
+URL_LINK_KEY = RELATION_NAMESPACE + 'id'
 
 PARAGRAPH_KEY = 'paragraphs'
 
@@ -60,6 +62,8 @@ def extract_text(element):
 def find_link(element):
     if LINK_KEY in element.attrib:
         link_encoding = element.attrib[LINK_KEY]
+    elif URL_LINK_KEY in element.attrib:
+        link_encoding = element.attrib[URL_LINK_KEY]
     else:
         link_encoding = None
     return link_encoding
