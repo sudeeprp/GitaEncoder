@@ -2,6 +2,7 @@ import xml.etree.ElementTree as et
 import zipfile
 import xml_navigator as xmlnav
 import consolidate
+import in_para_allcontent
 
 
 WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
@@ -102,13 +103,30 @@ def extract_content(para_element, style):
     return contentlist
 
 
+def compute_current_area(style, contentlist, current_area):
+    text_contentlist = in_para_allcontent.pick_contents(contentlist, lambda x: x['type'] == 'text')
+    if text_contentlist:
+        content_text = text_contentlist[0]["content"]
+        if style == 'heading1':
+            current_area['chapter'] = content_text
+            current_area['shloka'] = ''
+        if style == 'heading2':
+            current_area['shloka'] = content_text
+    return current_area
+
+
 def encode_doc(docx_path):
     paragraphs = []
+    current_area = {'chapter': '', 'shloka': ''}
     xml_root = get_xml_root(docx_path)
     for para_element in xmlnav.every(xml_root, PARA_NAMESPACE):
         style = extract_style(para_element)
+        contentlist = extract_content(para_element, style)
+        current_area = compute_current_area(style, contentlist, current_area)
         para_encoding = {'id': '*',
-                         'content': extract_content(para_element, style),
+                         'chapter': current_area['chapter'],
+                         'shloka': current_area['shloka'],
+                         'content': contentlist,
                          'style': style}
         paragraphs.append(para_encoding)
     return {'paragraphs': paragraphs}

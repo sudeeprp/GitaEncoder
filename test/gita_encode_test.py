@@ -113,6 +113,35 @@ class EncodeTest(unittest.TestCase):
                 extrefs_match.append(matcher.match(in_para_externalref.content_regex, content))
         self.assertAllAreOk(extrefs_match)
 
+    def test_current_chapter_goes_by_heading1(self):
+        current_area = {'chapter': 'Chapter 1', 'shloka': '1-5'}
+        chapter_name = 'Chapter 2'
+        current_area = gita_encode.compute_current_area\
+            ('heading1',
+             [{"type": "text", "content": chapter_name}],
+             current_area)
+        self.assertEqual(current_area['chapter'], chapter_name)
+        self.assertEqual(current_area['shloka'], '')
+        current_area = gita_encode.compute_current_area\
+            ('some style',
+             [{"type": "text", "content": 'some content'}],
+             current_area)
+        self.assertEqual(current_area['chapter'], chapter_name)
+
+    def test_current_shloka_goes_by_heading2(self):
+        current_area = {'chapter': '', 'shloka': ''}
+        shloka_name = '12-4'
+        current_area = gita_encode.compute_current_area\
+            ('heading2',
+             [{"type": "text", "content": shloka_name}],
+             current_area)
+        self.assertEqual(current_area['shloka'], shloka_name)
+        current_area = gita_encode.compute_current_area\
+            ('some style',
+             [{"type": "text", "content": 'some content'}],
+             current_area)
+        self.assertEqual(current_area['shloka'], shloka_name)
+
 
 if __name__ == '__main__':
     unittest.main()
